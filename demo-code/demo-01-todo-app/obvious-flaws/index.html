@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<!--
+  DEMO: OBVIOUS FLAWS VERSION
+  ════════════════════════════════════════════════════
+  This version contains errors that beginners can spot.
+  Use this to teach participants to TEST their code, not just look at it.
+
+  KNOWN ISSUES (for facilitators):
+  1. The Add button does nothing — the event listener targets a non-existent ID
+  2. Completed tasks are invisible (white text on white background)
+  3. The delete button removes the wrong item (always deletes index 0)
+  4. Page title says "My Notes" — wrong application name
+  5. Emoji in the heading causes a screen reader to read "spiral notepad emoji"
+     without meaningful context
+  ════════════════════════════════════════════════════
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Notes</title><!-- BUG: Wrong title -->
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 500px; margin: 40px auto; padding: 0 20px; }
+    h1 { color: #333; }
+    .input-area { display: flex; gap: 10px; margin-bottom: 20px; }
+    input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    ul { list-style: none; padding: 0; }
+    li { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; }
+    li.done { color: white; } /* BUG: White text on white background — invisible */
+    .delete-btn { background: #f44336; color: white; border: none; padding: 4px 8px; cursor: pointer; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<h1>📓 My To-Do List</h1>
+
+<div class="input-area">
+  <!-- No label — inaccessible to screen readers -->
+  <input type="text" id="taskInput" placeholder="Add a task...">
+  <!-- BUG: calls addTask() but the function references wrong ID -->
+  <button onclick="addTask()">Add</button>
+</div>
+
+<ul id="todoList"></ul>
+
+<script>
+  let tasks = [];
+
+  function addTask() {
+    // BUG: getElementById('task-input') — wrong ID (should be 'taskInput')
+    const input = document.getElementById('task-input');
+    const text = input.value.trim();
+    if (text) {
+      tasks.push({ text: text, done: false });
+      input.value = '';
+      renderTasks();
+    }
+    // When this fails silently, nothing happens — no error message to the user
+  }
+
+  function toggleTask(index) {
+    tasks[index].done = !tasks[index].done;
+    renderTasks();
+  }
+
+  function deleteTask(index) {
+    // BUG: always removes first item (index 0) regardless of which button was clicked
+    tasks.splice(0, 1);
+    renderTasks();
+  }
+
+  function renderTasks() {
+    const list = document.getElementById('todoList');
+    list.innerHTML = '';
+    tasks.forEach(function(task, index) {
+      const li = document.createElement('li');
+      if (task.done) {
+        li.className = 'done';
+      }
+      // BUG: clicking the task text calls toggleTask but 'li' text is not a button
+      // — keyboard users and screen readers cannot interact with it
+      li.innerHTML = '<span onclick="toggleTask(' + index + ')">' + task.text + '</span>' +
+                     '<button class="delete-btn" onclick="deleteTask(' + index + ')">Delete</button>';
+      list.appendChild(li);
+    });
+    // NOTE: No data persistence — refresh the page and everything is lost
+  }
+</script>
+
+</body>
+</html>

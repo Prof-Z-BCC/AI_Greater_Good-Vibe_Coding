@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<!--
+  DEMO 04 — VERSION 7: FULL DEGRADATION
+  ══════════════════════════════════════════════════════
+  Session: AI sessions 7–8. Multiple patches on top of patches.
+  Prompts: Various small fixes requested without providing architecture context.
+
+  ❌ DRIFT: The app appears to work on first use.
+  The bugs only appear under specific conditions:
+
+  BUG 1 — Filter doesn't work:
+    Add 3 tasks. Click "Show Complete". Should show only complete tasks.
+    Instead, shows ALL tasks. The filter function sets activeFilter
+    but renderTasks() doesn't read it.
+
+  BUG 2 — Delete sometimes fails silently:
+    Delete works via onclick="removeItem(id)". But after filtering,
+    rendered IDs may be out of sync. Deleting a filtered item does
+    nothing visible — the filter resets but the item wasn't removed.
+
+  BUG 3 — Sort causes data corruption:
+    Click "Sort by Priority". It mutates the todoItems array directly
+    instead of sorting a copy. Refreshing the page restores the original order
+    because localStorage wasn't updated — or shows sorted order permanently
+    if localStorage was updated. Behavior is inconsistent.
+
+  BUG 4 — Search combined with filter:
+    Search for a term, then click a filter button. Filter clears the search.
+    Search clears the filter. They don't compose — each one resets the other.
+
+  FACILITATOR: Walk through each bug one at a time.
+  The app LOOKS complete. Each bug only appears when you use it a certain way.
+  This is the hardest kind of bug to catch — it requires real user testing.
+  ══════════════════════════════════════════════════════
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Community Task Manager</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f0f4f8; min-height: 100vh; padding: 2rem 1rem; }
+    .app { background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 2rem; max-width: 680px; margin: 0 auto; }
+    h1 { font-size: 1.5rem; color: #028090; margin-bottom: 0.5rem; }
+    .version-badge { display: inline-block; background: #991b1b; color: #fff; font-size: 0.75rem; font-weight: bold; padding: 0.2rem 0.6rem; border-radius: 20px; margin-bottom: 1rem; }
+    .drift-notice { background: #fee2e2; border-left: 4px solid #dc2626; padding: 0.75rem 1rem; font-size: 0.85rem; color: #991b1b; margin-bottom: 1rem; border-radius: 0 6px 6px 0; }
+    form { display: grid; gap: 0.6rem; margin-bottom: 1rem; }
+    label { font-size: 0.875rem; font-weight: 600; color: #2b3a3c; }
+    input, select { width: 100%; padding: 0.5rem 0.75rem; border: 2px solid #d0d8da; border-radius: 6px; font-size: 1rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    button[type="submit"] { padding: 0.6rem 1.2rem; background: #028090; color: #fff; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    .controls { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; align-items: center; }
+    .controls input { flex: 1; min-width: 150px; padding: 0.4rem 0.7rem; }
+    .ctrl-btn { padding: 0.35rem 0.8rem; border: 2px solid #d0d8da; border-radius: 20px; background: none; font-size: 0.85rem; cursor: pointer; color: #5a6b6e; }
+    .ctrl-btn.active { background: #028090; color: #fff; border-color: #028090; }
+    ul { list-style: none; }
+    li { display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem; border-bottom: 1px solid #eef0f0; flex-wrap: wrap; }
+    .task-title { flex: 1; font-weight: 600; color: #2b3a3c; min-width: 100px; }
+    .assignee-name { font-size: 0.8rem; color: #5a6b6e; }
+    .badge { font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 20px; font-weight: 600; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-complete { background: #d1fae5; color: #065f46; }
+    .priority-low { background: #e0f2fe; color: #0369a1; }
+    .priority-medium { background: #fef3c7; color: #92400e; }
+    .priority-high, .urgent-flag { background: #fee2e2; color: #991b1b; }
+    .del-btn { background: none; border: none; color: #b85042; cursor: pointer; font-size: 1rem; }
+    .empty { text-align: center; color: #9aacae; padding: 1.5rem; }
+  </style>
+</head>
+<body>
+<main class="app">
+  <span class="version-badge">v7 — Full Degradation ❌</span>
+  <h1>Community Task Manager</h1>
+  <div class="drift-notice">
+    <strong>Facilitator — reproduce these bugs:</strong><br>
+    1. Add 2 pending and 1 complete task → click "Complete" filter → all tasks show (filter broken)<br>
+    2. Click "Sort by Priority" → tasks reorder → refresh → order may differ (mutates original array)<br>
+    3. Search for a task → click any filter button → search clears (can't compose search + filter)
+  </div>
+
+  <form id="todo-form">
+    <div><label for="item-title">Task title</label>
+    <input type="text" id="item-title" required autocomplete="off" placeholder="What needs to be done?"></div>
+    <div class="form-row">
+      <div><label for="assignee-name">Volunteer name</label>
+      <input type="text" id="assignee-name" required autocomplete="off" placeholder="Full name"></div>
+      <div><label for="assignee-email">Email</label>
+      <input type="email" id="assignee-email" autocomplete="off" placeholder="email@example.com"></div>
+    </div>
+    <div class="form-row">
+      <div><label for="todo-status">Status</label>
+      <select id="todo-status"><option value="pending">Pending</option><option value="complete">Complete</option></select></div>
+      <div><label for="item-priority">Priority</label>
+      <select id="item-priority"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
+    </div>
+    <button type="submit">Add Task</button>
+  </form>
+
+  <div class="controls">
+    <input type="text" id="search-input" placeholder="Search..." oninput="searchTasks()">
+    <button class="ctrl-btn active" onclick="setFilter('all')">All</button>
+    <button class="ctrl-btn" onclick="setFilter('pending')">Pending</button>
+    <button class="ctrl-btn" onclick="setFilter('complete')">Complete</button>
+    <button class="ctrl-btn" onclick="sortByPriority()">Sort by Priority</button>
+  </div>
+
+  <ul id="task-list" aria-live="polite"></ul>
+</main>
+
+<script>
+  let todoItems = JSON.parse(localStorage.getItem('tasks') || '[]');
+  let activeFilter = 'all'; // BUG: set but not read by renderTasks()
+
+  function saveItems() {
+    localStorage.setItem('tasks', JSON.stringify(todoItems));
+  }
+
+  function renderTasks() {
+    const list = document.getElementById('task-list');
+    list.innerHTML = '';
+    // BUG 1: activeFilter is never applied here — always renders all items
+    if (todoItems.length === 0) {
+      list.innerHTML = '<li class="empty">No tasks yet.</li>';
+      return;
+    }
+    todoItems.forEach(task => {
+      const priority = task.priority || 'low';
+      const priorityClass = priority === 'urgent' ? 'urgent-flag' : `priority-${priority}`;
+      // Handle both old string format and new object format
+      const assigneeName = typeof task.assignee === 'object' ? task.assignee.name : task.assignee;
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span class="task-title">${escapeHtml(task.title)}</span>
+        <span class="assignee-name">${escapeHtml(assigneeName)}</span>
+        <span class="badge ${priorityClass}">${priority}</span>
+        <span class="badge status-${task.status}">${task.status}</span>
+        <button class="del-btn" onclick="removeItem(${task.id})">✕</button>
+      `;
+      list.appendChild(li);
+    });
+  }
+
+  function setFilter(filter) {
+    activeFilter = filter; // sets the variable
+    // BUG 1: updates button styles but calls renderTasks() which ignores activeFilter
+    document.querySelectorAll('.ctrl-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('search-input').value = ''; // BUG 3: clears search when filter clicked
+    renderTasks(); // doesn't filter!
+  }
+
+  function searchTasks() {
+    const query = document.getElementById('search-input').value.toLowerCase();
+    // BUG 3: resets filter when search is used
+    activeFilter = 'all';
+    document.querySelectorAll('.ctrl-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector('.ctrl-btn').classList.add('active');
+    if (!query) { renderTasks(); return; }
+    const list = document.getElementById('task-list');
+    list.innerHTML = '';
+    const results = todoItems.filter(t => t.title.toLowerCase().includes(query));
+    results.forEach(task => {
+      const assigneeName = typeof task.assignee === 'object' ? task.assignee.name : task.assignee;
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span class="task-title">${escapeHtml(task.title)}</span>
+        <span class="assignee-name">${escapeHtml(assigneeName)}</span>
+        <span class="badge status-${task.status}">${task.status}</span>
+        <button class="del-btn" onclick="removeItem(${task.id})">✕</button>
+      `;
+      list.appendChild(li);
+    });
+  }
+
+  function sortByPriority() {
+    const order = { urgent: 0, high: 1, medium: 2, low: 3 };
+    // BUG 2: sorts todoItems in place — mutates the original array
+    todoItems.sort((a, b) => (order[a.priority] || 3) - (order[b.priority] || 3));
+    // saveItems() NOT called — localStorage not updated
+    // So after refresh, order may revert — OR if called below, permanently changes stored order
+    renderTasks();
+  }
+
+  function addTodoItem(title, assigneeName, assigneeEmail, status, priority) {
+    todoItems.push({ id: Date.now(), title, assignee: { name: assigneeName, email: assigneeEmail }, status, priority, createdAt: new Date().toISOString() });
+    saveItems();
+    renderTasks();
+  }
+
+  function removeItem(id) {
+    // BUG 2: if called after sortByPriority(), may not work correctly since
+    // the rendered order differs from the todoItems array order (not saved)
+    todoItems = todoItems.filter(item => item.id !== id);
+    saveItems();
+    renderTasks();
+  }
+
+  function escapeHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  document.getElementById('todo-form').addEventListener('submit', e => {
+    e.preventDefault();
+    addTodoItem(
+      document.getElementById('item-title').value.trim(),
+      document.getElementById('assignee-name').value.trim(),
+      document.getElementById('assignee-email').value.trim(),
+      document.getElementById('todo-status').value,
+      document.getElementById('item-priority').value
+    );
+    e.target.reset();
+  });
+
+  renderTasks();
+</script>
+</body>
+</html>

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<!--
+  DEMO 04 — VERSION 8: RECOVERED
+  ══════════════════════════════════════════════════════
+  What changed from v7:
+
+  BEFORE WRITING ANY CODE:
+  1. Created ARCHITECTURE.md defining data model, functions, naming
+  2. Every AI prompt for this version started with:
+     "Refer to ARCHITECTURE.md. Data model is Task{...}. Key functions:
+      renderTasks(), saveTasks(), setFilter(), setSearch(), sortTasks().
+      Do not add new render functions. Filter and search must compose."
+
+  FIXES APPLIED:
+  ✅ Single state object — filter and search compose correctly
+  ✅ renderTasks() reads state.filter AND state.searchQuery
+  ✅ sortTasks() sorts a copy, never mutates state.tasks
+  ✅ Consistent naming: 'task' everywhere (no 'item', 'todo')
+  ✅ Data migration: old string-format assignee handled gracefully
+  ✅ All form fields have labels
+  ✅ escapeHtml() applied to all user content in innerHTML
+  ✅ No duplicate functions
+  ✅ No debug console.log() statements left in
+  ══════════════════════════════════════════════════════
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Community Task Manager</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f0f4f8; min-height: 100vh; padding: 2rem 1rem; }
+    .app { background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 2rem; max-width: 680px; margin: 0 auto; }
+    h1 { font-size: 1.5rem; color: #028090; margin-bottom: 0.25rem; }
+    .version-badge { display: inline-block; background: #028090; color: #fff; font-size: 0.75rem; font-weight: bold; padding: 0.2rem 0.6rem; border-radius: 20px; margin-bottom: 1rem; }
+    .recovery-note { background: #ecfdf5; border-left: 4px solid #028090; padding: 0.75rem 1rem; font-size: 0.85rem; color: #065f46; margin-bottom: 1.25rem; border-radius: 0 6px 6px 0; }
+
+    form { display: grid; gap: 0.65rem; margin-bottom: 1.25rem; }
+    label { font-size: 0.875rem; font-weight: 600; color: #2b3a3c; display: block; margin-bottom: 0.2rem; }
+    input, select { width: 100%; padding: 0.5rem 0.75rem; border: 2px solid #d0d8da; border-radius: 6px; font-size: 1rem; transition: border-color 0.15s; }
+    input:focus, select:focus { outline: none; border-color: #028090; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.65rem; }
+    .error-msg { font-size: 0.8rem; color: #dc2626; margin-top: 0.2rem; display: none; }
+    button[type="submit"] { padding: 0.6rem 1.2rem; background: #028090; color: #fff; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+    button[type="submit"]:hover { background: #026070; }
+    button[type="submit"]:focus { outline: 2px solid #028090; outline-offset: 2px; }
+
+    .controls { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; align-items: center; }
+    .search-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+    .controls input { flex: 1; min-width: 140px; padding: 0.4rem 0.7rem; }
+    .filter-btn { padding: 0.35rem 0.85rem; border: 2px solid #d0d8da; border-radius: 20px; background: none; font-size: 0.85rem; cursor: pointer; color: #5a6b6e; transition: all 0.15s; }
+    .filter-btn.active, .filter-btn:hover { background: #028090; color: #fff; border-color: #028090; }
+    .filter-btn:focus { outline: 2px solid #028090; outline-offset: 2px; }
+    .sort-btn { padding: 0.35rem 0.85rem; border: 2px solid #d0d8da; border-radius: 6px; background: none; font-size: 0.85rem; cursor: pointer; color: #5a6b6e; }
+    .sort-btn:hover { border-color: #028090; color: #028090; }
+
+    .task-count { font-size: 0.85rem; color: #9aacae; margin-bottom: 0.5rem; }
+    ul { list-style: none; }
+    li { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; border-bottom: 1px solid #eef0f0; flex-wrap: wrap; }
+    li:last-child { border-bottom: none; }
+    .task-title { flex: 1; font-weight: 600; color: #2b3a3c; min-width: 100px; }
+    .task-assignee { font-size: 0.8rem; color: #5a6b6e; }
+    .badge { font-size: 0.75rem; padding: 0.12rem 0.45rem; border-radius: 20px; font-weight: 600; white-space: nowrap; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-complete { background: #d1fae5; color: #065f46; }
+    .priority-low { background: #e0f2fe; color: #0369a1; }
+    .priority-medium { background: #fef3c7; color: #92400e; }
+    .priority-high { background: #fee2e2; color: #991b1b; }
+    .priority-urgent { background: #dc2626; color: #fff; }
+    .task-due { font-size: 0.75rem; color: #5a6b6e; }
+    .task-due.overdue { color: #dc2626; font-weight: 600; }
+    .btn-delete { background: none; border: none; color: #b85042; cursor: pointer; font-size: 1rem; padding: 0.2rem 0.4rem; border-radius: 4px; }
+    .btn-delete:hover { background: #fef2f2; }
+    .btn-delete:focus { outline: 2px solid #b85042; outline-offset: 1px; }
+    .empty { text-align: center; color: #9aacae; padding: 2rem; }
+  </style>
+</head>
+<body>
+<main class="app">
+  <span class="version-badge">v8 — Recovered ✅</span>
+  <h1>Community Task Manager</h1>
+  <div class="recovery-note">
+    <strong>What changed:</strong> ARCHITECTURE.md was created before any new code was written. Every AI prompt referenced it. Single state object. Filter and search compose. No duplicate functions. Consistent naming throughout.
+  </div>
+
+  <form id="task-form" novalidate>
+    <div>
+      <label for="task-title">Task title</label>
+      <input type="text" id="task-title" required autocomplete="off" placeholder="What needs to be done?">
+      <span class="error-msg" id="err-title">Task title is required.</span>
+    </div>
+    <div class="form-row">
+      <div>
+        <label for="assignee-name">Volunteer name</label>
+        <input type="text" id="assignee-name" required autocomplete="off" placeholder="Full name">
+        <span class="error-msg" id="err-assignee">Volunteer name is required.</span>
+      </div>
+      <div>
+        <label for="assignee-email">Email (optional)</label>
+        <input type="email" id="assignee-email" autocomplete="off" placeholder="email@example.com">
+        <span class="error-msg" id="err-email">Enter a valid email or leave blank.</span>
+      </div>
+    </div>
+    <div class="form-row-3">
+      <div>
+        <label for="task-status">Status</label>
+        <select id="task-status">
+          <option value="pending">Pending</option>
+          <option value="complete">Complete</option>
+        </select>
+      </div>
+      <div>
+        <label for="task-priority">Priority</label>
+        <select id="task-priority">
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+        </select>
+      </div>
+      <div>
+        <label for="task-category">Category</label>
+        <select id="task-category">
+          <option value="general">General</option>
+          <option value="outreach">Outreach</option>
+          <option value="admin">Admin</option>
+          <option value="events">Events</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <label for="task-due">Due date (optional)</label>
+      <input type="date" id="task-due">
+    </div>
+    <button type="submit">Add Task</button>
+  </form>
+
+  <div class="controls">
+    <label class="search-label" for="search-input">Search tasks</label>
+    <input type="text" id="search-input" placeholder="Search tasks…" oninput="setSearch(this.value)" autocomplete="off">
+    <button class="filter-btn active" onclick="setFilter('all')" aria-pressed="true">All</button>
+    <button class="filter-btn" onclick="setFilter('pending')" aria-pressed="false">Pending</button>
+    <button class="filter-btn" onclick="setFilter('complete')" aria-pressed="false">Complete</button>
+    <button class="sort-btn" onclick="sortTasks('priority')">↕ Priority</button>
+    <button class="sort-btn" onclick="sortTasks('dueDate')">↕ Due Date</button>
+  </div>
+
+  <p class="task-count" id="task-count" aria-live="polite"></p>
+  <ul id="task-list" aria-label="Task list" aria-live="polite"></ul>
+</main>
+
+<script>
+  // ── Single state object ────────────────────────────────────────────────
+  // Filter and search compose: both are always applied in renderTasks()
+  const state = {
+    tasks: [],
+    filter: 'all',       // 'all' | 'pending' | 'complete'
+    searchQuery: '',
+  };
+
+  // ── Storage ────────────────────────────────────────────────────────────
+  function loadTasks() {
+    const raw = JSON.parse(localStorage.getItem('tasks') || '[]');
+    // Data migration: handle old string-format assignee from v1-v5
+    state.tasks = raw.map(task => ({
+      ...task,
+      assignee: typeof task.assignee === 'string'
+        ? { name: task.assignee, email: '' }
+        : task.assignee,
+    }));
+  }
+
+  function saveTasks() {
+    localStorage.setItem('tasks', JSON.stringify(state.tasks));
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────
+  // Single render function. Reads state.filter AND state.searchQuery.
+  function renderTasks() {
+    const list = document.getElementById('task-list');
+    const countEl = document.getElementById('task-count');
+    const today = new Date().toISOString().split('T')[0];
+
+    // Apply filter, then search — they compose
+    let visible = state.tasks.filter(task => {
+      if (state.filter !== 'all' && task.status !== state.filter) return false;
+      if (state.searchQuery) {
+        const q = state.searchQuery.toLowerCase();
+        const name = task.assignee?.name?.toLowerCase() || '';
+        return task.title.toLowerCase().includes(q) || name.includes(q) || (task.category || '').includes(q);
+      }
+      return true;
+    });
+
+    countEl.textContent = `Showing ${visible.length} of ${state.tasks.length} task${state.tasks.length !== 1 ? 's' : ''}`;
+    list.innerHTML = '';
+
+    if (visible.length === 0) {
+      list.innerHTML = '<li class="empty">No tasks match the current filter.</li>';
+      return;
+    }
+
+    visible.forEach(task => {
+      const isOverdue = task.dueDate && task.status !== 'complete' && task.dueDate < today;
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span class="task-title">${escapeHtml(task.title)}</span>
+        <span class="task-assignee">${escapeHtml(task.assignee?.name || '')}</span>
+        ${task.dueDate ? `<span class="task-due ${isOverdue ? 'overdue' : ''}">Due: ${task.dueDate}${isOverdue ? ' (overdue)' : ''}</span>` : ''}
+        <span class="badge priority-${task.priority || 'low'}">${task.priority || 'low'}</span>
+        <span class="badge status-${task.status}">${task.status}</span>
+        <button class="btn-delete" aria-label="Delete task: ${escapeHtml(task.title)}">✕</button>
+      `;
+      li.querySelector('.btn-delete').addEventListener('click', () => deleteTask(task.id));
+      list.appendChild(li);
+    });
+  }
+
+  // ── Actions ────────────────────────────────────────────────────────────
+  function addTask(data) {
+    state.tasks.push({
+      id: Date.now(),
+      title: data.title,
+      assignee: { name: data.assigneeName, email: data.assigneeEmail },
+      status: data.status,
+      priority: data.priority,
+      category: data.category,
+      dueDate: data.dueDate || null,
+      createdAt: new Date().toISOString(),
+    });
+    saveTasks();
+    renderTasks();
+  }
+
+  function deleteTask(id) {
+    state.tasks = state.tasks.filter(t => t.id !== id);
+    saveTasks();
+    renderTasks();
+  }
+
+  function setFilter(value) {
+    state.filter = value;
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      const isActive = btn.textContent.toLowerCase().startsWith(value) || (value === 'all' && btn.textContent === 'All');
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-pressed', isActive);
+    });
+    renderTasks();
+  }
+
+  function setSearch(query) {
+    state.searchQuery = query.trim();
+    renderTasks(); // filter is still applied alongside search
+  }
+
+  function sortTasks(field) {
+    // Sorts a COPY — never mutates state.tasks
+    const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+    const sorted = [...state.tasks].sort((a, b) => {
+      if (field === 'priority') return (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3);
+      if (field === 'dueDate') {
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return a.dueDate.localeCompare(b.dueDate);
+      }
+      return 0;
+    });
+    // Render from sorted copy — original state.tasks unchanged
+    const list = document.getElementById('task-list');
+    list.innerHTML = '';
+    sorted.forEach(task => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span class="task-title">${escapeHtml(task.title)}</span>
+        <span class="task-assignee">${escapeHtml(task.assignee?.name || '')}</span>
+        <span class="badge priority-${task.priority || 'low'}">${task.priority || 'low'}</span>
+        <span class="badge status-${task.status}">${task.status}</span>
+        <button class="btn-delete" aria-label="Delete task: ${escapeHtml(task.title)}">✕</button>
+      `;
+      li.querySelector('.btn-delete').addEventListener('click', () => deleteTask(task.id));
+      list.appendChild(li);
+    });
+  }
+
+  // ── Validation ─────────────────────────────────────────────────────────
+  function validateForm() {
+    let valid = true;
+    const title = document.getElementById('task-title').value.trim();
+    const name = document.getElementById('assignee-name').value.trim();
+    const email = document.getElementById('assignee-email').value.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    document.getElementById('err-title').style.display = title ? 'none' : 'block';
+    document.getElementById('err-assignee').style.display = name ? 'none' : 'block';
+    document.getElementById('err-email').style.display = (!email || emailRegex.test(email)) ? 'none' : 'block';
+
+    if (!title || !name) valid = false;
+    if (email && !emailRegex.test(email)) valid = false;
+    return valid;
+  }
+
+  // ── XSS prevention ─────────────────────────────────────────────────────
+  function escapeHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Events ─────────────────────────────────────────────────────────────
+  document.getElementById('task-form').addEventListener('submit', e => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    addTask({
+      title:         document.getElementById('task-title').value.trim(),
+      assigneeName:  document.getElementById('assignee-name').value.trim(),
+      assigneeEmail: document.getElementById('assignee-email').value.trim(),
+      status:        document.getElementById('task-status').value,
+      priority:      document.getElementById('task-priority').value,
+      category:      document.getElementById('task-category').value,
+      dueDate:       document.getElementById('task-due').value || null,
+    });
+    e.target.reset();
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────
+  loadTasks();
+  renderTasks();
+</script>
+</body>
+</html>

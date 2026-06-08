@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<!--
+  DEMO 04 — VERSION 3: NAMING DRIFT BEGINS
+  ══════════════════════════════════════════════════════
+  Session: AI session 3. Context was NOT re-provided.
+  Prompt used: "Add a way to mark tasks as high priority."
+
+  AI had no context about the existing codebase. It introduced
+  its own naming conventions, which now conflict with v1/v2.
+
+  ⚠️ DRIFT INTRODUCED: Naming inconsistency
+  Search this file for these three words — all mean the same thing:
+    "task"  →  used in v1/v2 (correct)
+    "item"  →  introduced by AI in this session
+    "todo"  →  also introduced by AI in this session
+
+  FACILITATOR: Ask participants to Ctrl+F each word.
+  They are all referring to the same concept.
+  This is drift. It is invisible until the project gets larger.
+  ══════════════════════════════════════════════════════
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Community Task Manager</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f0f4f8; min-height: 100vh; padding: 2rem 1rem; }
+    .app { background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 2rem; max-width: 600px; margin: 0 auto; }
+    h1 { font-size: 1.5rem; color: #028090; margin-bottom: 0.5rem; }
+    .version-badge { display: inline-block; background: #A05840; color: #fff; font-size: 0.75rem; font-weight: bold; padding: 0.2rem 0.6rem; border-radius: 20px; margin-bottom: 1rem; }
+    .drift-notice { background: #fff3cd; border-left: 4px solid #f59e0b; padding: 0.75rem 1rem; font-size: 0.85rem; color: #92400e; margin-bottom: 1rem; border-radius: 0 6px 6px 0; }
+    form { display: grid; gap: 0.75rem; margin-bottom: 1.5rem; }
+    label { font-size: 0.875rem; font-weight: 600; color: #2b3a3c; }
+    input, select { width: 100%; padding: 0.5rem 0.75rem; border: 2px solid #d0d8da; border-radius: 6px; font-size: 1rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    button[type="submit"] { padding: 0.6rem 1.2rem; background: #028090; color: #fff; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    ul { list-style: none; }
+    li { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border-bottom: 1px solid #eef0f0; flex-wrap: wrap; }
+    .task-title { flex: 1; font-weight: 600; color: #2b3a3c; min-width: 120px; }
+    .item-assignee { font-size: 0.875rem; color: #5a6b6e; } /* DRIFT: was 'task-assignee' */
+    .badge { font-size: 0.8rem; padding: 0.15rem 0.5rem; border-radius: 20px; font-weight: 600; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-complete { background: #d1fae5; color: #065f46; }
+    .priority-low { background: #e0f2fe; color: #0369a1; }
+    .priority-medium { background: #fef3c7; color: #92400e; }
+    .priority-high { background: #fee2e2; color: #991b1b; }
+    .urgent-flag { background: #dc2626; color: #fff; } /* DRIFT: a third priority style was added */
+    .todo-delete-btn { background: none; border: none; color: #b85042; cursor: pointer; font-size: 1rem; padding: 0.2rem 0.4rem; } /* DRIFT: was 'btn-delete' */
+    .empty { text-align: center; color: #9aacae; padding: 1.5rem; }
+  </style>
+</head>
+<body>
+<main class="app">
+  <span class="version-badge">v3 — Naming Drift ⚠️</span>
+  <h1>Community Task Manager</h1>
+  <div class="drift-notice">
+    <strong>Facilitator note:</strong> Search this file for "task", "item", and "todo" — all three refer to the same concept. This is naming drift.
+  </div>
+
+  <form id="todo-form"> <!-- DRIFT: was 'task-form' -->
+    <div>
+      <label for="item-title">Task title</label> <!-- DRIFT: id is 'item-title', label says 'Task' -->
+      <input type="text" id="item-title" required autocomplete="off" placeholder="What needs to be done?">
+    </div>
+    <div>
+      <label for="item-assignee">Assign to</label>
+      <input type="text" id="item-assignee" required autocomplete="off" placeholder="Volunteer name">
+    </div>
+    <div class="form-row">
+      <div>
+        <label for="todo-status">Status</label> <!-- DRIFT: 'todo-status' -->
+        <select id="todo-status">
+          <option value="pending">Pending</option>
+          <option value="complete">Complete</option>
+        </select>
+      </div>
+      <div>
+        <label for="item-priority">Priority</label>
+        <select id="item-priority"> <!-- DRIFT: 'item-priority' -->
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option> <!-- DRIFT: 4th value added, not in original spec -->
+        </select>
+      </div>
+    </div>
+    <button type="submit">Add Task</button>
+  </form>
+
+  <ul id="task-list" aria-live="polite"></ul> <!-- This stayed as 'task-list' — inconsistent with form -->
+</main>
+
+<script>
+  // DRIFT: variable renamed from 'tasks' to 'todoItems' in this session
+  // Both names are now used in different parts of the code
+  let todoItems = JSON.parse(localStorage.getItem('tasks') || '[]'); // reads 'tasks' key but stores in 'todoItems'
+
+  // DRIFT: function renamed saveTasks → saveItems, but localStorage key is still 'tasks'
+  function saveItems() {
+    localStorage.setItem('tasks', JSON.stringify(todoItems));
+  }
+
+  // renderTasks() from v1/v2 was NOT preserved — AI wrote a new version with different name
+  function renderItems() { // DRIFT: was renderTasks()
+    const list = document.getElementById('task-list');
+    list.innerHTML = '';
+    if (todoItems.length === 0) {
+      list.innerHTML = '<li class="empty">No tasks yet.</li>';
+      return;
+    }
+    todoItems.forEach(item => { // DRIFT: loop variable 'item' instead of 'task'
+      const priority = item.priority || 'low';
+      const priorityClass = priority === 'urgent' ? 'urgent-flag' : `priority-${priority}`;
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span class="task-title">${escapeHtml(item.title)}</span>
+        <span class="item-assignee">${escapeHtml(item.assignee)}</span>
+        <span class="badge ${priorityClass}">${priority}</span>
+        <span class="badge status-${item.status}">${item.status}</span>
+        <button class="todo-delete-btn" aria-label="Remove">✕</button>
+      `; // DRIFT: 'todo-delete-btn' class, generic "Remove" aria-label
+      li.querySelector('.todo-delete-btn').addEventListener('click', () => removeItem(item.id));
+      list.appendChild(li);
+    });
+  }
+
+  // DRIFT: addTask → addTodoItem
+  function addTodoItem(title, assignee, status, priority) {
+    todoItems.push({ id: Date.now(), title, assignee, status, priority, createdAt: new Date().toISOString() });
+    saveItems();
+    renderItems();
+  }
+
+  // DRIFT: deleteTask → removeItem
+  function removeItem(id) {
+    todoItems = todoItems.filter(item => item.id !== id);
+    saveItems();
+    renderItems();
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // DRIFT: form ID changed to 'todo-form', input IDs changed
+  document.getElementById('todo-form').addEventListener('submit', e => {
+    e.preventDefault();
+    addTodoItem(
+      document.getElementById('item-title').value.trim(),
+      document.getElementById('item-assignee').value.trim(),
+      document.getElementById('todo-status').value,
+      document.getElementById('item-priority').value
+    );
+    e.target.reset();
+  });
+
+  renderItems(); // DRIFT: was renderTasks()
+</script>
+</body>
+</html>

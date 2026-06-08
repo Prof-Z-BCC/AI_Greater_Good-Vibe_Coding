@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<!--
+  DEMO 04 — VERSION 5: GROWING FILE & STRUCTURAL DEBT
+  ══════════════════════════════════════════════════════
+  Session: AI session 5.
+  Prompt used: "Add categories, due dates, and a search bar."
+
+  Three features requested in one prompt. AI appended all three
+  without reorganizing the existing code. File is now 500+ lines.
+  Mixed concerns: data, rendering, and UI all intertwined.
+
+  ⚠️ DRIFT: Structural debt
+  - File is unwieldy — hard to find anything
+  - Sorting and filtering logic duplicated across functions
+  - Due date uses a different date format than createdAt
+  - Search function replicates renderTasks() logic instead of calling it
+  - Category added as 'category' in addTodoItem() but 'tag' in the search filter
+  ══════════════════════════════════════════════════════
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Community Task Manager</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f0f4f8; min-height: 100vh; padding: 2rem 1rem; }
+    .app { background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 2rem; max-width: 660px; margin: 0 auto; }
+    h1 { font-size: 1.5rem; color: #028090; margin-bottom: 0.5rem; }
+    .version-badge { display: inline-block; background: #B85042; color: #fff; font-size: 0.75rem; font-weight: bold; padding: 0.2rem 0.6rem; border-radius: 20px; margin-bottom: 1rem; }
+    .drift-notice { background: #fee2e2; border-left: 4px solid #dc2626; padding: 0.75rem 1rem; font-size: 0.85rem; color: #991b1b; margin-bottom: 1rem; border-radius: 0 6px 6px 0; }
+    form { display: grid; gap: 0.75rem; margin-bottom: 1rem; }
+    label { font-size: 0.875rem; font-weight: 600; color: #2b3a3c; }
+    input, select { width: 100%; padding: 0.5rem 0.75rem; border: 2px solid #d0d8da; border-radius: 6px; font-size: 1rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    button[type="submit"] { padding: 0.6rem 1.2rem; background: #028090; color: #fff; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    .search-bar { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .search-bar input { flex: 1; }
+    .search-bar button { padding: 0.5rem 1rem; background: #5a6b6e; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    ul { list-style: none; }
+    li { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.75rem; border-bottom: 1px solid #eef0f0; flex-wrap: wrap; }
+    .task-title { flex: 1; font-weight: 600; color: #2b3a3c; min-width: 120px; }
+    .item-assignee, .task-due, .task-category { font-size: 0.8rem; color: #5a6b6e; }
+    .badge { font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 20px; font-weight: 600; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-complete { background: #d1fae5; color: #065f46; }
+    .priority-low { background: #e0f2fe; color: #0369a1; }
+    .priority-medium { background: #fef3c7; color: #92400e; }
+    .priority-high, .urgent-flag { background: #fee2e2; color: #991b1b; }
+    .todo-delete-btn { background: none; border: none; color: #b85042; cursor: pointer; font-size: 1rem; }
+    .overdue { color: #dc2626; font-weight: 600; }
+    .empty { text-align: center; color: #9aacae; padding: 1.5rem; }
+  </style>
+</head>
+<body>
+<main class="app">
+  <span class="version-badge">v5 — Growing File ⚠️</span>
+  <h1>Community Task Manager</h1>
+  <div class="drift-notice">
+    <strong>Facilitator note:</strong> This file is 500+ lines. Categories are stored as 'category' but filtered as 'tag'. Due dates use a different format than createdAt. The search function duplicates render logic instead of calling renderTasks().
+  </div>
+
+  <form id="todo-form">
+    <div>
+      <label for="item-title">Task title</label>
+      <input type="text" id="item-title" required autocomplete="off" placeholder="What needs to be done?">
+    </div>
+    <div class="form-row">
+      <div>
+        <label for="item-assignee">Assign to</label>
+        <input type="text" id="item-assignee" required autocomplete="off" placeholder="Volunteer name">
+      </div>
+      <div>
+        <label for="item-category">Category</label>
+        <select id="item-category">
+          <option value="general">General</option>
+          <option value="outreach">Outreach</option>
+          <option value="admin">Admin</option>
+          <option value="events">Events</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label for="todo-status">Status</label>
+        <select id="todo-status">
+          <option value="pending">Pending</option>
+          <option value="complete">Complete</option>
+        </select>
+      </div>
+      <div>
+        <label for="item-priority">Priority</label>
+        <select id="item-priority">
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <label for="item-due">Due date</label>
+      <input type="date" id="item-due"> <!-- stores as YYYY-MM-DD, but createdAt uses ISO string — inconsistent -->
+    </div>
+    <button type="submit">Add Task</button>
+  </form>
+
+  <div class="search-bar">
+    <!-- No label — inaccessible to screen readers -->
+    <input type="text" id="search-input" placeholder="Search tasks...">
+    <button onclick="searchTasks()">Search</button>
+    <button onclick="clearSearch()">Clear</button>
+  </div>
+
+  <ul id="task-list" aria-live="polite"></ul>
+</main>
+
+<script>
+  let todoItems = JSON.parse(localStorage.getItem('tasks') || '[]');
+
+  function saveItems() {
+    localStorage.setItem('tasks', JSON.stringify(todoItems));
+  }
+
+  // DRIFT: renderItems from v3 is gone. renderTasks from v4 was "refactored" but mixed with new logic.
+  function renderTasks(itemsToRender) {
+    // DRIFT: parameter added but not always passed — falls back to todoItems
+    const items = itemsToRender || todoItems;
+    const list = document.getElementById('task-list');
+    list.innerHTML = '';
+    if (items.length === 0) {
+      list.innerHTML = '<li class="empty">No tasks found.</li>';
+      return;
+    }
+    items.forEach(task => {
+      const priority = task.priority || 'low';
+      const priorityClass = priority === 'urgent' ? 'urgent-flag' : `priority-${priority}`;
+      const today = new Date().toISOString().split('T')[0];
+      // DRIFT: due date comparison uses string comparison — may fail for some date formats
+      const isOverdue = task.dueDate && task.status !== 'complete' && task.dueDate < today;
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span class="task-title">${escapeHtml(task.title)}</span>
+        <span class="item-assignee">${escapeHtml(task.assignee)}</span>
+        ${task.category ? `<span class="task-category badge">${escapeHtml(task.category)}</span>` : ''}
+        ${task.dueDate ? `<span class="task-due ${isOverdue ? 'overdue' : ''}">Due: ${task.dueDate}</span>` : ''}
+        <span class="badge ${priorityClass}">${priority}</span>
+        <span class="badge status-${task.status}">${task.status}</span>
+        <button class="todo-delete-btn" onclick="removeItem(${task.id})">✕</button>
+      `;
+      list.appendChild(li);
+    });
+  }
+
+  // DRIFT: searchTasks() DUPLICATES the rendering logic instead of filtering and calling renderTasks()
+  function searchTasks() {
+    const query = document.getElementById('search-input').value.toLowerCase();
+    const list = document.getElementById('task-list');
+    list.innerHTML = '';
+    // DRIFT: filters on 'tag' but items have 'category' field
+    const results = todoItems.filter(item =>
+      item.title.toLowerCase().includes(query) ||
+      item.assignee.toLowerCase().includes(query) ||
+      (item.tag && item.tag.toLowerCase().includes(query)) // BUG: should be item.category
+    );
+    if (results.length === 0) {
+      list.innerHTML = '<li class="empty">No matching tasks.</li>';
+      return;
+    }
+    // Duplicated rendering logic — should call renderTasks(results) instead
+    results.forEach(task => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span class="task-title">${escapeHtml(task.title)}</span>
+        <span class="item-assignee">${escapeHtml(task.assignee)}</span>
+        <span class="badge status-${task.status}">${task.status}</span>
+        <button class="todo-delete-btn" onclick="removeItem(${task.id})">✕</button>
+      `; // DRIFT: search results don't show priority or category badges — incomplete duplication
+      list.appendChild(li);
+    });
+  }
+
+  function clearSearch() {
+    document.getElementById('search-input').value = '';
+    renderTasks();
+  }
+
+  function addTodoItem(title, assignee, status, priority, category, dueDate) {
+    todoItems.push({
+      id: Date.now(),
+      title, assignee, status, priority,
+      category,     // DRIFT: stored as 'category'
+      dueDate,      // DRIFT: stored as YYYY-MM-DD, but createdAt is ISO string
+      createdAt: new Date().toISOString()
+    });
+    saveItems();
+    renderTasks();
+  }
+
+  function removeItem(id) {
+    todoItems = todoItems.filter(item => item.id !== id);
+    saveItems();
+    renderTasks();
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  document.getElementById('todo-form').addEventListener('submit', e => {
+    e.preventDefault();
+    addTodoItem(
+      document.getElementById('item-title').value.trim(),
+      document.getElementById('item-assignee').value.trim(),
+      document.getElementById('todo-status').value,
+      document.getElementById('item-priority').value,
+      document.getElementById('item-category').value,
+      document.getElementById('item-due').value || null
+    );
+    e.target.reset();
+  });
+
+  renderTasks();
+</script>
+</body>
+</html>

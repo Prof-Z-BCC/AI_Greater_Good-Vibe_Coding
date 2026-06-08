@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<!--
+  DEMO 04 — VERSION 6: CONFLICTING DATA MODELS
+  ══════════════════════════════════════════════════════
+  Session: AI session 6.
+  Prompt used: "Change tasks to have an assignee field — a volunteer's name and email."
+
+  AI updated the data model for NEW tasks: assignee is now { name, email }.
+  But EXISTING tasks have assignee as a plain string.
+  The rendering code doesn't handle both formats.
+
+  ❌ DRIFT: Breaking — data model conflict
+  - Old tasks: { assignee: "Maria Lopez" }
+  - New tasks: { assignee: { name: "Maria Lopez", email: "maria@example.com" } }
+  - renderTasks() tries to call .name on the old string → undefined
+  - Old tasks show "Assigned to: undefined" instead of the volunteer's name
+  - Open browser console to see TypeError warnings
+
+  FACILITATOR: Add two tasks — one will display correctly (new format).
+  Reload and look at any tasks already in localStorage (old format).
+  They show "Assigned to: undefined".
+  This is a data migration bug. The fix requires migrating existing data.
+  ══════════════════════════════════════════════════════
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Community Task Manager</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f0f4f8; min-height: 100vh; padding: 2rem 1rem; }
+    .app { background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 2rem; max-width: 660px; margin: 0 auto; }
+    h1 { font-size: 1.5rem; color: #028090; margin-bottom: 0.5rem; }
+    .version-badge { display: inline-block; background: #B85042; color: #fff; font-size: 0.75rem; font-weight: bold; padding: 0.2rem 0.6rem; border-radius: 20px; margin-bottom: 1rem; }
+    .drift-notice { background: #fee2e2; border-left: 4px solid #dc2626; padding: 0.75rem 1rem; font-size: 0.85rem; color: #991b1b; margin-bottom: 1rem; border-radius: 0 6px 6px 0; }
+    form { display: grid; gap: 0.75rem; margin-bottom: 1rem; }
+    label { font-size: 0.875rem; font-weight: 600; color: #2b3a3c; }
+    input, select { width: 100%; padding: 0.5rem 0.75rem; border: 2px solid #d0d8da; border-radius: 6px; font-size: 1rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    button[type="submit"] { padding: 0.6rem 1.2rem; background: #028090; color: #fff; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    ul { list-style: none; }
+    li { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.75rem; border-bottom: 1px solid #eef0f0; flex-wrap: wrap; }
+    .task-title { flex: 1; font-weight: 600; color: #2b3a3c; min-width: 120px; }
+    .assignee-block { font-size: 0.8rem; color: #5a6b6e; }
+    .assignee-email { font-size: 0.75rem; color: #9aacae; }
+    .badge { font-size: 0.75rem; padding: 0.1rem 0.45rem; border-radius: 20px; font-weight: 600; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-complete { background: #d1fae5; color: #065f46; }
+    .priority-low { background: #e0f2fe; color: #0369a1; }
+    .priority-medium { background: #fef3c7; color: #92400e; }
+    .priority-high, .urgent-flag { background: #fee2e2; color: #991b1b; }
+    .todo-delete-btn { background: none; border: none; color: #b85042; cursor: pointer; font-size: 1rem; }
+    .empty { text-align: center; color: #9aacae; padding: 1.5rem; }
+    .broken-row { background: #fff5f5; }
+  </style>
+</head>
+<body>
+<main class="app">
+  <span class="version-badge">v6 — Conflicting Data Models ❌</span>
+  <h1>Community Task Manager</h1>
+  <div class="drift-notice">
+    <strong>Facilitator note:</strong> First, add a task — it works. Then open browser DevTools → Application → localStorage → delete 'tasks' and reload. Paste this into Console to simulate old data:<br>
+    <code style="display:block;margin-top:0.5rem;word-break:break-all;">localStorage.setItem('tasks', JSON.stringify([{id:1,title:"Old task",assignee:"Maria Lopez",status:"pending",priority:"high"}]))</code>
+    Then reload. The old task shows "Assigned to: undefined".
+  </div>
+
+  <form id="todo-form">
+    <div>
+      <label for="item-title">Task title</label>
+      <input type="text" id="item-title" required autocomplete="off" placeholder="What needs to be done?">
+    </div>
+    <div class="form-row">
+      <div>
+        <label for="assignee-name">Volunteer name</label>
+        <input type="text" id="assignee-name" required autocomplete="off" placeholder="Full name">
+      </div>
+      <div>
+        <label for="assignee-email">Volunteer email</label>
+        <!-- DRIFT: email field added but not validated -->
+        <input type="email" id="assignee-email" autocomplete="off" placeholder="email@example.com">
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label for="todo-status">Status</label>
+        <select id="todo-status">
+          <option value="pending">Pending</option>
+          <option value="complete">Complete</option>
+        </select>
+      </div>
+      <div>
+        <label for="item-priority">Priority</label>
+        <select id="item-priority">
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+        </select>
+      </div>
+    </div>
+    <button type="submit">Add Task</button>
+  </form>
+
+  <ul id="task-list" aria-live="polite"></ul>
+</main>
+
+<script>
+  let todoItems = JSON.parse(localStorage.getItem('tasks') || '[]');
+
+  function saveItems() {
+    localStorage.setItem('tasks', JSON.stringify(todoItems));
+  }
+
+  function renderTasks() {
+    const list = document.getElementById('task-list');
+    list.innerHTML = '';
+    if (todoItems.length === 0) {
+      list.innerHTML = '<li class="empty">No tasks yet.</li>';
+      return;
+    }
+    todoItems.forEach(task => {
+      const priority = task.priority || 'low';
+      const priorityClass = priority === 'urgent' ? 'urgent-flag' : `priority-${priority}`;
+
+      // !! BUG: assumes assignee is always an object with .name and .email
+      // Old tasks have assignee as a plain string → .name is undefined
+      const assigneeName = task.assignee.name;    // BREAKS for old string format
+      const assigneeEmail = task.assignee.email;  // BREAKS for old string format
+
+      const li = document.createElement('li');
+      if (typeof task.assignee === 'string') li.classList.add('broken-row'); // highlight broken rows
+      li.innerHTML = `
+        <span class="task-title">${escapeHtml(task.title)}</span>
+        <span class="assignee-block">
+          Assigned to: ${escapeHtml(assigneeName || '⚠ undefined — old data format')}
+          ${assigneeEmail ? `<br><span class="assignee-email">${escapeHtml(assigneeEmail)}</span>` : ''}
+        </span>
+        <span class="badge ${priorityClass}">${priority}</span>
+        <span class="badge status-${task.status}">${task.status}</span>
+        <button class="todo-delete-btn" onclick="removeItem(${task.id})">✕</button>
+      `;
+      list.appendChild(li);
+    });
+  }
+
+  function addTodoItem(title, assigneeName, assigneeEmail, status, priority) {
+    // NEW format: assignee is now an object
+    todoItems.push({
+      id: Date.now(),
+      title,
+      assignee: { name: assigneeName, email: assigneeEmail }, // NEW object format
+      status, priority,
+      createdAt: new Date().toISOString()
+    });
+    saveItems();
+    renderTasks();
+  }
+
+  function removeItem(id) {
+    todoItems = todoItems.filter(item => item.id !== id);
+    saveItems();
+    renderTasks();
+  }
+
+  function escapeHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  document.getElementById('todo-form').addEventListener('submit', e => {
+    e.preventDefault();
+    addTodoItem(
+      document.getElementById('item-title').value.trim(),
+      document.getElementById('assignee-name').value.trim(),
+      document.getElementById('assignee-email').value.trim(),
+      document.getElementById('todo-status').value,
+      document.getElementById('item-priority').value
+    );
+    e.target.reset();
+  });
+
+  renderTasks();
+</script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<!--
+  DEMO: SUBTLE FLAWS VERSION
+  ════════════════════════════════════════════════════
+  This version LOOKS and WORKS fine on first inspection.
+  The app runs without visible errors. A beginner might ship this.
+
+  Use this to demonstrate that "it works" ≠ "it's correct or safe."
+
+  HIDDEN ISSUES (for facilitators — reveal one at a time):
+
+  LAYER 1 — Functional (easier to spot with testing):
+  1. No input length limit — a user can type 10,000 characters into one task
+  2. Whitespace-only tasks are accepted ("   " becomes a valid task)
+  3. No feedback when you try to add an empty task — fails silently
+
+  LAYER 2 — Security (requires code review to spot):
+  4. XSS VULNERABILITY: task text is injected via innerHTML without sanitization.
+     Try entering this as a task:
+       <img src=x onerror="alert('XSS attack — your data is at risk')">
+     In a real app this could steal session tokens or redirect users.
+  5. localStorage stores task data in plain text — visible to any JavaScript
+     running on the page (e.g., a malicious third-party script)
+
+  LAYER 3 — Accessibility (requires tools or screen reader to spot):
+  6. No form element — the input and button are not wrapped in a <form>,
+     so pressing Enter does not submit (keyboard users must click)
+  7. The task list has no aria-live region — screen reader users don't hear
+     when tasks are added or removed
+  8. No visible focus styles — keyboard navigation is present but invisible
+
+  DISCUSSION QUESTION FOR PARTICIPANTS:
+  "Would you trust this app with a list of your volunteers' names and contact info?"
+  ════════════════════════════════════════════════════
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To-Do List</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+    .app {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      padding: 2rem;
+      width: 100%;
+      max-width: 540px;
+    }
+    h1 { font-size: 1.6rem; margin-bottom: 1.5rem; color: #028090; }
+    .add-area { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+    /* FLAW 8: No visible focus styles — :focus-visible not defined */
+    input[type="text"] {
+      flex: 1;
+      padding: 0.6rem 0.9rem;
+      border: 2px solid #d0d8da;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    button {
+      padding: 0.6rem 1.2rem;
+      background: #028090;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    ul { list-style: none; }
+    li {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #eef0f0;
+    }
+    li:last-child { border-bottom: none; }
+    input[type="checkbox"] { width: 1.1rem; height: 1.1rem; accent-color: #028090; }
+    .task-text { flex: 1; }
+    li.done .task-text { text-decoration: line-through; color: #9aacae; }
+    .del { background: none; border: none; color: #b85042; cursor: pointer; padding: 0.2rem 0.5rem; }
+  </style>
+</head>
+<body>
+<main class="app">
+  <h1>My To-Do List</h1>
+
+  <!-- FLAW 6: No <form> element, so Enter key does not submit -->
+  <div class="add-area">
+    <!-- No label — just a placeholder -->
+    <input type="text" id="taskInput" placeholder="Add a task…">
+    <button onclick="addTask()">Add</button>
+  </div>
+
+  <!-- FLAW 7: No aria-live — screen reader won't announce changes -->
+  <ul id="taskList"></ul>
+</main>
+
+<script>
+  // Load from localStorage (persists on refresh — this part works)
+  let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+  render();
+
+  function addTask() {
+    const input = document.getElementById('taskInput');
+    const text = input.value; // FLAW 2: No .trim() — whitespace is accepted
+
+    // FLAW 3: No feedback if empty — just silently does nothing
+    if (!text) return;
+
+    // FLAW 1: No maxLength check — unlimited input length
+    tasks.push({ id: Date.now(), text: text, done: false });
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+    input.value = '';
+    render();
+  }
+
+  function toggle(id) {
+    tasks = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+    render();
+  }
+
+  function remove(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+    render();
+  }
+
+  function render() {
+    const list = document.getElementById('taskList');
+    list.innerHTML = '';
+    tasks.forEach(task => {
+      const li = document.createElement('li');
+      if (task.done) li.classList.add('done');
+
+      // !! FLAW 4: XSS VULNERABILITY !!
+      // innerHTML with unsanitized user input — try entering:
+      // <img src=x onerror="alert('XSS!')">
+      li.innerHTML = `
+        <input type="checkbox" ${task.done ? 'checked' : ''} onclick="toggle(${task.id})">
+        <span class="task-text">${task.text}</span>
+        <button class="del" onclick="remove(${task.id})" aria-label="Delete">✕</button>
+      `;
+      list.appendChild(li);
+    });
+  }
+</script>
+</body>
+</html>
