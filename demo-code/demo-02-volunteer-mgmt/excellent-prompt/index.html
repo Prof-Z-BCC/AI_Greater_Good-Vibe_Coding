@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Volunteer Management</title>
+  <style>
+    /* ---- Reset & Base ---- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 1rem;
+      background: #f0f4f8;
+      color: #1a202c;
+      padding: 2rem 1rem;
+      min-height: 100vh;
+    }
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.75rem;
+      margin-bottom: 1.5rem;
+      color: #1a202c;
+    }
+    h2 {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      color: #2d3748;
+    }
+
+    /* ---- Card ---- */
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      margin-bottom: 1.5rem;
+    }
+
+    /* ---- Form ---- */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .form-group.full-width { grid-column: 1 / -1; }
+    label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #4a5568;
+    }
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"] {
+      padding: 0.55rem 0.75rem;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      font-size: 1rem;
+      color: #1a202c;
+      background: white;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #3182ce;
+      box-shadow: 0 0 0 3px rgba(49,130,206,0.25);
+    }
+
+    /* ---- Availability checkboxes ---- */
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      padding-top: 0.25rem;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.9rem;
+      font-weight: normal;
+      color: #2d3748;
+      cursor: pointer;
+    }
+    .checkbox-label input[type="checkbox"] {
+      width: 1.1rem;
+      height: 1.1rem;
+      accent-color: #3182ce;
+      cursor: pointer;
+    }
+
+    /* ---- Buttons ---- */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.6rem 1.25rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: #2c7a4b; color: white; }
+    .btn-primary:hover { background: #276044; }
+    .btn-sm {
+      padding: 0.3rem 0.7rem;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-toggle-active   { background: #c6f6d5; color: #276044; }
+    .btn-toggle-inactive { background: #fed7d7; color: #9b2c2c; }
+    .btn-toggle-active:hover   { background: #9ae6b4; }
+    .btn-toggle-inactive:hover { background: #feb2b2; }
+    .form-actions { margin-top: 1.25rem; }
+
+    /* ---- Status badge ---- */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .badge-active   { background: #c6f6d5; color: #276044; }
+    .badge-inactive { background: #e2e8f0; color: #718096; }
+
+    /* ---- Table ---- */
+    .table-wrapper { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    thead th {
+      background: #2c7a4b;
+      color: white;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    tbody td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: middle;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: #f7fafc; }
+
+    /* ---- Summary bar ---- */
+    .summary {
+      display: flex;
+      gap: 1.5rem;
+      font-size: 0.875rem;
+      color: #718096;
+      margin-bottom: 1rem;
+    }
+    .summary strong { color: #1a202c; }
+
+    /* ---- Empty state ---- */
+    .empty-state {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: #a0aec0;
+    }
+    .empty-state p { margin-top: 0.5rem; font-size: 0.9rem; }
+
+    /* ---- Error message ---- */
+    .error-msg {
+      background: #fff5f5;
+      border: 1px solid #fc8181;
+      color: #c53030;
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      margin-top: 1rem;
+      font-size: 0.875rem;
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-group.full-width { grid-column: 1; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Volunteer Management</h1>
+
+    <!-- Registration Form -->
+    <section class="card" aria-labelledby="form-heading">
+      <h2 id="form-heading">Register a Volunteer</h2>
+      <form id="volunteerForm" novalidate>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="fullName">Full Name <span aria-hidden="true">*</span></label>
+            <input type="text" id="fullName" name="fullName" autocomplete="name"
+                   aria-required="true" placeholder="Jane Smith">
+          </div>
+          <div class="form-group">
+            <label for="email">Email Address <span aria-hidden="true">*</span></label>
+            <input type="email" id="email" name="email" autocomplete="email"
+                   aria-required="true" placeholder="jane@example.com">
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" name="phone" autocomplete="tel"
+                   placeholder="(607) 555-0100">
+          </div>
+          <div class="form-group full-width">
+            <fieldset style="border:none; padding:0;">
+              <legend style="font-size:0.875rem; font-weight:600; color:#4a5568; margin-bottom:0.35rem;">
+                Availability
+              </legend>
+              <div class="checkbox-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" name="availability" value="Monday"> Monday
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" name="availability" value="Wednesday"> Wednesday
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" name="availability" value="Friday"> Friday
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" name="availability" value="Weekend"> Weekend
+                </label>
+              </div>
+            </fieldset>
+          </div>
+        </div>
+        <div id="formError" class="error-msg" role="alert" aria-live="polite"></div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Add Volunteer</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Volunteer List -->
+    <section class="card" aria-labelledby="list-heading">
+      <h2 id="list-heading">Registered Volunteers</h2>
+      <div class="summary" aria-live="polite" id="summary" aria-label="Volunteer summary"></div>
+      <div class="table-wrapper" id="tableContainer">
+        <div class="empty-state" role="status">
+          <strong>No volunteers registered yet.</strong>
+          <p>Fill out the form above to add the first one.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ---- Data ----
+    var STORAGE_KEY = 'volunteers_v1';
+
+    function loadVolunteers() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveVolunteers(list) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+      } catch (e) { /* storage unavailable — in-memory only */ }
+    }
+
+    var volunteers = loadVolunteers();
+
+    // ---- Helpers ----
+    function escapeHtml(str) {
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode(String(str)));
+      return d.innerHTML;
+    }
+
+    // ---- Render ----
+    function render() {
+      var container = document.getElementById('tableContainer');
+      var summary   = document.getElementById('summary');
+
+      if (volunteers.length === 0) {
+        container.innerHTML =
+          '<div class="empty-state" role="status">' +
+          '<strong>No volunteers registered yet.</strong>' +
+          '<p>Fill out the form above to add the first one.</p>' +
+          '</div>';
+        summary.innerHTML = '';
+        return;
+      }
+
+      var activeCount = volunteers.filter(function(v){ return v.active; }).length;
+      summary.innerHTML =
+        '<span>Total: <strong>' + volunteers.length + '</strong></span>' +
+        '<span>Active: <strong>' + activeCount + '</strong></span>' +
+        '<span>Inactive: <strong>' + (volunteers.length - activeCount) + '</strong></span>';
+
+      var rows = volunteers.map(function(v, i) {
+        var avail = v.availability.length ? escapeHtml(v.availability.join(', ')) : '<em>Not specified</em>';
+        var badge = v.active
+          ? '<span class="badge badge-active">Active</span>'
+          : '<span class="badge badge-inactive">Inactive</span>';
+        var toggleLabel = v.active ? 'Mark Inactive' : 'Mark Active';
+        var toggleClass = v.active ? 'btn-sm btn-toggle-active' : 'btn-sm btn-toggle-inactive';
+        return '<tr>' +
+          '<td>' + escapeHtml(v.name) + '</td>' +
+          '<td><a href="mailto:' + escapeHtml(v.email) + '">' + escapeHtml(v.email) + '</a></td>' +
+          '<td>' + (v.phone ? escapeHtml(v.phone) : '<em>—</em>') + '</td>' +
+          '<td>' + avail + '</td>' +
+          '<td>' + badge + '</td>' +
+          '<td><button class="' + toggleClass + '" onclick="toggleStatus(' + i + ')" ' +
+               'aria-label="' + toggleLabel + ' for ' + escapeHtml(v.name) + '">' +
+               toggleLabel + '</button></td>' +
+          '</tr>';
+      }).join('');
+
+      container.innerHTML =
+        '<table>' +
+        '<thead><tr>' +
+          '<th scope="col">Name</th>' +
+          '<th scope="col">Email</th>' +
+          '<th scope="col">Phone</th>' +
+          '<th scope="col">Availability</th>' +
+          '<th scope="col">Status</th>' +
+          '<th scope="col">Actions</th>' +
+        '</tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+        '</table>';
+    }
+
+    // ---- Toggle status ----
+    function toggleStatus(index) {
+      volunteers[index].active = !volunteers[index].active;
+      saveVolunteers(volunteers);
+      render();
+    }
+
+    // ---- Form submission ----
+    document.getElementById('volunteerForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      var name  = document.getElementById('fullName').value.trim();
+      var email = document.getElementById('email').value.trim();
+      var phone = document.getElementById('phone').value.trim();
+      var boxes = document.querySelectorAll('input[name="availability"]:checked');
+      var avail = Array.from(boxes).map(function(b){ return b.value; });
+
+      var errorEl = document.getElementById('formError');
+      errorEl.classList.remove('visible');
+      errorEl.textContent = '';
+
+      // Validation
+      var errors = [];
+      if (!name)  errors.push('Full name is required.');
+      if (!email) errors.push('Email address is required.');
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Please enter a valid email address.');
+
+      if (errors.length) {
+        errorEl.textContent = errors.join(' ');
+        errorEl.classList.add('visible');
+        return;
+      }
+
+      volunteers.push({
+        name:         name,
+        email:        email,
+        phone:        phone,
+        availability: avail,
+        active:       true
+      });
+
+      saveVolunteers(volunteers);
+      this.reset();
+      render();
+
+      // Move focus to the table area for accessibility
+      document.getElementById('list-heading').focus();
+    });
+
+    // ---- Init ----
+    render();
+  </script>
+</body>
+</html>

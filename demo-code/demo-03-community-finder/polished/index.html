@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Broome County Community Resource Finder</title>
+  <style>
+    /* ---- Reset & Custom Properties ---- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-dark:   #1a5c38;
+      --green-mid:    #2c7a4b;
+      --green-light:  #d4edda;
+      --blue-mid:     #1d6fa4;
+      --blue-light:   #dbeafe;
+      --orange-mid:   #c06c1e;
+      --orange-light: #fde8c8;
+      --purple-light: #ede9fe;
+      --purple-mid:   #6d41c7;
+      --red-light:    #fde8e8;
+      --red-mid:      #b83232;
+      --teal-light:   #d0f0ec;
+      --teal-mid:     #0d756a;
+      --yellow-light: #fef9c3;
+      --yellow-mid:   #92680a;
+      --gray-100: #f8f9fa;
+      --gray-200: #e9ecef;
+      --gray-300: #dee2e6;
+      --gray-600: #6c757d;
+      --gray-700: #495057;
+      --gray-800: #343a40;
+      --gray-900: #212529;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+      --radius: 10px;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: var(--gray-100);
+      color: var(--gray-900);
+      min-height: 100vh;
+    }
+
+    /* ---- Skip Link (Accessibility) ---- */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 0;
+      background: var(--green-dark);
+      color: white;
+      padding: 0.5rem 1rem;
+      font-weight: 600;
+      z-index: 9999;
+      text-decoration: none;
+      border-radius: 0 0 4px 0;
+    }
+    .skip-link:focus { top: 0; }
+
+    /* ---- Header ---- */
+    header {
+      background: linear-gradient(135deg, var(--green-dark) 0%, var(--green-mid) 100%);
+      color: white;
+      padding: 2.5rem 1.5rem 2rem;
+      text-align: center;
+    }
+    .header-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.35);
+      padding: 0.3rem 0.9rem;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+    header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.25rem);
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    header p {
+      font-size: 1.05rem;
+      opacity: 0.88;
+      max-width: 580px;
+      margin: 0 auto 1.5rem;
+    }
+
+    /* ---- Search Bar ---- */
+    .search-container {
+      display: flex;
+      gap: 0.5rem;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+    .search-wrap {
+      position: relative;
+      flex: 1;
+    }
+    .search-icon {
+      position: absolute;
+      left: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      opacity: 0.55;
+    }
+    #searchInput {
+      width: 100%;
+      padding: 0.7rem 0.75rem 0.7rem 2.5rem;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-radius: 8px;
+      font-size: 1rem;
+      background: rgba(255,255,255,0.92);
+      color: var(--gray-900);
+    }
+    #searchInput:focus {
+      outline: none;
+      border-color: white;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.35);
+    }
+    #searchInput::placeholder { color: var(--gray-600); }
+    .btn-search {
+      padding: 0.7rem 1.4rem;
+      background: white;
+      color: var(--green-dark);
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .btn-search:hover { background: var(--green-light); }
+    .btn-search:focus-visible {
+      outline: 3px solid white;
+      outline-offset: 2px;
+    }
+
+    /* ---- Main Content ---- */
+    .main-content {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 3rem;
+    }
+
+    /* ---- Filter Bar ---- */
+    .filter-section {
+      background: white;
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .filter-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--gray-700);
+      white-space: nowrap;
+    }
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      flex: 1;
+    }
+    .chip {
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      border: 1.5px solid var(--gray-300);
+      background: white;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.12s;
+      color: var(--gray-700);
+    }
+    .chip:hover { border-color: var(--green-mid); color: var(--green-dark); }
+    .chip.active {
+      background: var(--green-mid);
+      border-color: var(--green-mid);
+      color: white;
+    }
+    .chip:focus-visible {
+      outline: 2px solid var(--green-mid);
+      outline-offset: 2px;
+    }
+    .clear-btn {
+      background: none;
+      border: none;
+      font-size: 0.82rem;
+      color: var(--gray-600);
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 0.25rem 0;
+      white-space: nowrap;
+    }
+    .clear-btn:hover { color: var(--gray-900); }
+
+    /* ---- Results Bar ---- */
+    .results-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .results-count {
+      font-size: 0.875rem;
+      color: var(--gray-600);
+    }
+    .results-count strong { color: var(--gray-900); }
+
+    /* ---- Resource Grid ---- */
+    .resource-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+
+    /* ---- Resource Card ---- */
+    .resource-card {
+      background: white;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: box-shadow 0.15s, transform 0.15s;
+    }
+    .resource-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+    .card-accent { height: 4px; }
+    .card-body { padding: 1.1rem 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 0.6rem; }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      line-height: 1.3;
+    }
+    .category-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .card-desc {
+      font-size: 0.875rem;
+      color: var(--gray-700);
+      line-height: 1.5;
+      flex: 1;
+    }
+    .card-meta { display: flex; flex-direction: column; gap: 0.3rem; }
+    .meta-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      font-size: 0.82rem;
+      color: var(--gray-600);
+    }
+    .meta-icon { flex-shrink: 0; margin-top: 1px; }
+    .card-footer {
+      padding: 0.75rem 1.25rem;
+      border-top: 1px solid var(--gray-200);
+      display: flex;
+      gap: 0.5rem;
+    }
+    .btn-card {
+      flex: 1;
+      text-align: center;
+      padding: 0.45rem 0;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      border: 1.5px solid var(--gray-300);
+      color: var(--gray-700);
+      background: white;
+      transition: all 0.12s;
+    }
+    .btn-card:hover { border-color: var(--green-mid); color: var(--green-dark); background: var(--green-light); }
+    .btn-card:focus-visible { outline: 2px solid var(--green-mid); outline-offset: 2px; }
+    .btn-card-primary {
+      background: var(--green-mid);
+      border-color: var(--green-mid);
+      color: white;
+    }
+    .btn-card-primary:hover { background: var(--green-dark); border-color: var(--green-dark); color: white; }
+
+    /* ---- Category color map ---- */
+    .cat-food       { --cat-bg: var(--orange-light); --cat-text: var(--orange-mid); --accent: #c06c1e; }
+    .cat-housing    { --cat-bg: var(--blue-light);   --cat-text: var(--blue-mid);   --accent: #1d6fa4; }
+    .cat-health     { --cat-bg: var(--red-light);    --cat-text: var(--red-mid);    --accent: #b83232; }
+    .cat-education  { --cat-bg: var(--purple-light); --cat-text: var(--purple-mid); --accent: #6d41c7; }
+    .cat-employment { --cat-bg: var(--teal-light);   --cat-text: var(--teal-mid);   --accent: #0d756a; }
+    .cat-transport  { --cat-bg: var(--yellow-light); --cat-text: var(--yellow-mid); --accent: #92680a; }
+    .cat-youth      { --cat-bg: var(--green-light);  --cat-text: var(--green-dark); --accent: #1a5c38; }
+    .cat-seniors    { --cat-bg: var(--blue-light);   --cat-text: #1a4e6e;           --accent: #1a4e6e; }
+
+    .resource-card .card-accent { background: var(--accent); }
+    .resource-card .category-badge { background: var(--cat-bg); color: var(--cat-text); }
+
+    /* ---- Empty State ---- */
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--gray-600);
+    }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .empty-state h2 { font-size: 1.1rem; color: var(--gray-800); margin-bottom: 0.5rem; }
+    .empty-state p { font-size: 0.9rem; }
+
+    /* ---- Footer ---- */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.8rem;
+      color: var(--gray-600);
+      border-top: 1px solid var(--gray-200);
+    }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 600px) {
+      .search-container { flex-direction: column; }
+      .filter-section { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header>
+    <p class="header-badge">Broome County, NY</p>
+    <h1>Community Resource Finder</h1>
+    <p>Free and low-cost services for residents of the Greater Binghamton area.</p>
+    <div class="search-container" role="search" aria-label="Search community resources">
+      <div class="search-wrap">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Search by name, service, or keyword…"
+               aria-label="Search resources" autocomplete="off">
+      </div>
+      <button class="btn-search" id="searchBtn" type="button">Search</button>
+    </div>
+  </header>
+
+  <main class="main-content" id="main-content">
+
+    <!-- Filter chips -->
+    <section class="filter-section" aria-label="Filter by category">
+      <span class="filter-label" id="filter-group-label">Filter by:</span>
+      <div class="filter-chips" role="group" aria-labelledby="filter-group-label">
+        <button class="chip active" data-cat="" type="button" aria-pressed="true">All</button>
+        <button class="chip cat-food"       data-cat="Food"          type="button" aria-pressed="false">Food</button>
+        <button class="chip cat-housing"    data-cat="Housing"       type="button" aria-pressed="false">Housing</button>
+        <button class="chip cat-health"     data-cat="Health"        type="button" aria-pressed="false">Health</button>
+        <button class="chip cat-education"  data-cat="Education"     type="button" aria-pressed="false">Education</button>
+        <button class="chip cat-employment" data-cat="Employment"    type="button" aria-pressed="false">Employment</button>
+        <button class="chip cat-transport"  data-cat="Transportation" type="button" aria-pressed="false">Transportation</button>
+        <button class="chip cat-youth"      data-cat="Youth"         type="button" aria-pressed="false">Youth</button>
+        <button class="chip cat-seniors"    data-cat="Seniors"       type="button" aria-pressed="false">Seniors</button>
+      </div>
+      <button class="clear-btn" type="button" id="clearBtn" aria-label="Clear all filters">Clear filters</button>
+    </section>
+
+    <!-- Results summary -->
+    <div class="results-bar">
+      <p class="results-count" id="resultsCount" aria-live="polite" aria-atomic="true"></p>
+    </div>
+
+    <!-- Resource Cards -->
+    <div class="resource-grid" id="resourceGrid" aria-label="Resource listings"></div>
+
+  </main>
+
+  <footer>
+    <p>Built as a demonstration for the <strong>AI for the Greater Good</strong> program at SUNY Broome Community College.</p>
+    <p style="margin-top:0.4rem;">Resource information is for demonstration purposes. Verify details directly with each organization.</p>
+  </footer>
+
+  <script>
+    var resources = [
+      {
+        name: "Broome County Food Bank",
+        category: "Food",
+        address: "3 UN Plaza, Johnson City, NY 13790",
+        phone: "(607) 722-8457",
+        website: "https://www.foodbankbroome.org",
+        description: "Distributes food to pantries, soup kitchens, and shelters across Broome County. Open to all residents in need."
+      },
+      {
+        name: "Catholic Charities of Broome County",
+        category: "Food",
+        address: "232 Main St, Binghamton, NY 13905",
+        phone: "(607) 729-9166",
+        website: "https://www.catholiccharitiesbroome.org",
+        description: "Emergency food pantry, case management, and general social services for all regardless of religion."
+      },
+      {
+        name: "Rescue Mission of Broome County",
+        category: "Housing",
+        address: "42 Front St, Binghamton, NY 13905",
+        phone: "(607) 723-8113",
+        website: "https://www.binghamtonrescuemission.org",
+        description: "Emergency shelter, meals, and recovery programs for adults experiencing homelessness."
+      },
+      {
+        name: "Volunteers of America — Upstate NY",
+        category: "Housing",
+        address: "264 Chenango St, Binghamton, NY 13901",
+        phone: "(607) 772-0634",
+        website: "https://www.voaupstateny.org",
+        description: "Emergency and transitional housing, rental assistance, and supportive services for families and individuals."
+      },
+      {
+        name: "Lourdes Hospital Community Health",
+        category: "Health",
+        address: "169 Riverside Dr, Binghamton, NY 13905",
+        phone: "(607) 798-5111",
+        website: "https://www.lourdes.com",
+        description: "Community health programs, free health screenings, and low-cost clinic referrals throughout Broome County."
+      },
+      {
+        name: "Southern Tier Independence Center",
+        category: "Health",
+        address: "5 Corliss Ave, Binghamton, NY 13905",
+        phone: "(607) 724-2111",
+        website: "https://www.stic-cil.org",
+        description: "Independent living services, advocacy, peer support, and assistive technology for people with disabilities."
+      },
+      {
+        name: "Maternal & Family Health Services",
+        category: "Health",
+        address: "285 Main St, Binghamton, NY 13905",
+        phone: "(607) 723-8411",
+        website: "https://www.maternalfamilyhealth.org",
+        description: "WIC nutrition program, prenatal care, family health education, and community health worker services."
+      },
+      {
+        name: "SUNY Broome Community College",
+        category: "Education",
+        address: "907 Upper Front St, Binghamton, NY 13905",
+        phone: "(607) 778-5000",
+        website: "https://www.sunybroome.edu",
+        description: "Affordable associate degrees, certificates, continuing education, and workforce development programs."
+      },
+      {
+        name: "Broome-Tioga BOCES",
+        category: "Education",
+        address: "435 Glenwood Rd, Binghamton, NY 13905",
+        phone: "(607) 763-3300",
+        website: "https://www.btboces.org",
+        description: "Adult education, GED preparation, English as a Second Language, and career and technical training."
+      },
+      {
+        name: "Career Solutions Broome County",
+        category: "Employment",
+        address: "171 Front St, Binghamton, NY 13905",
+        phone: "(607) 778-1211",
+        website: "https://www.careersolutionsny.org",
+        description: "Free job search assistance, resume writing, interview prep, job training, and unemployment resources."
+      },
+      {
+        name: "Broome County Transit",
+        category: "Transportation",
+        address: "Binghamton, NY 13902",
+        phone: "(607) 778-1400",
+        website: "https://www.broomecountyny.gov/transit",
+        description: "Fixed-route public bus service throughout Broome County. Reduced fares for seniors and people with disabilities."
+      },
+      {
+        name: "Broome County Youth Bureau",
+        category: "Youth",
+        address: "60 Hawley St, Binghamton, NY 13901",
+        phone: "(607) 778-2138",
+        website: "https://www.broomecountyny.gov/youthbureau",
+        description: "After-school programs, summer enrichment, mentoring, and youth development services for ages 5–21."
+      },
+      {
+        name: "Office for Aging — BC Senior Services",
+        category: "Seniors",
+        address: "60 Hawley St, Binghamton, NY 13901",
+        phone: "(607) 778-2411",
+        website: "https://www.broomecountyny.gov/aging",
+        description: "Home-delivered meals, transportation, in-home support, caregiver respite, and social programs for adults 60+."
+      },
+      {
+        name: "NYSARC Broome County Chapter",
+        category: "Health",
+        address: "249 Glenwood Rd, Binghamton, NY 13905",
+        phone: "(607) 724-7258",
+        website: "https://www.nysarc-broome.org",
+        description: "Support, advocacy, and community services for individuals with intellectual and developmental disabilities."
+      }
+    ];
+
+    // ---- State ----
+    var activeCategory = '';
+    var searchQuery    = '';
+
+    // ---- Helpers ----
+    function escapeHtml(str) {
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode(String(str || '')));
+      return d.innerHTML;
+    }
+
+    function categoryClass(cat) {
+      var map = {
+        'Food':           'cat-food',
+        'Housing':        'cat-housing',
+        'Health':         'cat-health',
+        'Education':      'cat-education',
+        'Employment':     'cat-employment',
+        'Transportation': 'cat-transport',
+        'Youth':          'cat-youth',
+        'Seniors':        'cat-seniors'
+      };
+      return map[cat] || '';
+    }
+
+    // ---- Filter ----
+    function filteredResources() {
+      return resources.filter(function(r) {
+        var matchCat  = !activeCategory || r.category === activeCategory;
+        var q = searchQuery.toLowerCase();
+        var matchText = !q
+          || r.name.toLowerCase().includes(q)
+          || r.description.toLowerCase().includes(q)
+          || r.category.toLowerCase().includes(q)
+          || r.address.toLowerCase().includes(q);
+        return matchCat && matchText;
+      });
+    }
+
+    // ---- Render ----
+    function render() {
+      var list      = filteredResources();
+      var grid      = document.getElementById('resourceGrid');
+      var countEl   = document.getElementById('resultsCount');
+
+      var total = resources.length;
+      var shown = list.length;
+      if (shown === total) {
+        countEl.innerHTML = 'Showing all <strong>' + total + '</strong> resources';
+      } else {
+        countEl.innerHTML = 'Showing <strong>' + shown + '</strong> of ' + total + ' resources';
+      }
+
+      if (list.length === 0) {
+        grid.innerHTML =
+          '<div class="empty-state">' +
+          '<div class="empty-icon" aria-hidden="true">🔍</div>' +
+          '<h2>No resources found</h2>' +
+          '<p>Try a different search term or remove the category filter.</p>' +
+          '</div>';
+        return;
+      }
+
+      grid.innerHTML = list.map(function(r) {
+        var cc = categoryClass(r.category);
+        var phoneHref = 'tel:' + r.phone.replace(/\D/g,'');
+        return '<article class="resource-card ' + cc + '">' +
+          '<div class="card-accent" aria-hidden="true"></div>' +
+          '<div class="card-body">' +
+            '<div class="card-header">' +
+              '<h2 class="card-title">' + escapeHtml(r.name) + '</h2>' +
+              '<span class="category-badge" aria-label="Category: ' + escapeHtml(r.category) + '">' + escapeHtml(r.category) + '</span>' +
+            '</div>' +
+            '<p class="card-desc">' + escapeHtml(r.description) + '</p>' +
+            '<div class="card-meta">' +
+              '<div class="meta-row">' +
+                '<svg class="meta-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
+                '<span>' + escapeHtml(r.address) + '</span>' +
+              '</div>' +
+              '<div class="meta-row">' +
+                '<svg class="meta-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>' +
+                '<a href="' + phoneHref + '">' + escapeHtml(r.phone) + '</a>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="card-footer">' +
+            '<a href="' + escapeHtml(r.website) + '" target="_blank" rel="noopener noreferrer" class="btn-card btn-card-primary" ' +
+               'aria-label="Visit website for ' + escapeHtml(r.name) + ' (opens in new tab)">Website</a>' +
+            '<a href="' + phoneHref + '" class="btn-card" aria-label="Call ' + escapeHtml(r.name) + ' at ' + escapeHtml(r.phone) + '">Call</a>' +
+          '</div>' +
+        '</article>';
+      }).join('');
+    }
+
+    // ---- Event Handlers ----
+    document.querySelectorAll('.chip').forEach(function(chip) {
+      chip.addEventListener('click', function() {
+        activeCategory = this.dataset.cat;
+        document.querySelectorAll('.chip').forEach(function(c) {
+          c.classList.remove('active');
+          c.setAttribute('aria-pressed', 'false');
+        });
+        this.classList.add('active');
+        this.setAttribute('aria-pressed', 'true');
+        render();
+      });
+    });
+
+    document.getElementById('searchBtn').addEventListener('click', function() {
+      searchQuery = document.getElementById('searchInput').value.trim();
+      render();
+    });
+
+    document.getElementById('searchInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        searchQuery = this.value.trim();
+        render();
+      }
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', function() {
+      searchQuery    = '';
+      activeCategory = '';
+      document.getElementById('searchInput').value = '';
+      document.querySelectorAll('.chip').forEach(function(c) {
+        c.classList.remove('active');
+        c.setAttribute('aria-pressed', 'false');
+      });
+      document.querySelector('.chip[data-cat=""]').classList.add('active');
+      document.querySelector('.chip[data-cat=""]').setAttribute('aria-pressed', 'true');
+      render();
+    });
+
+    // ---- Init ----
+    render();
+  </script>
+</body>
+</html>

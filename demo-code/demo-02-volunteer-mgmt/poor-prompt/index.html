@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Volunteer App</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    input { margin: 5px; }
+    button { margin: 5px; }
+    li { margin: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Volunteer App</h1>
+  <input type="text" id="name" placeholder="name">
+  <input type="text" id="email" placeholder="email">
+  <button onclick="add()">Add</button>
+  <ul id="list"></ul>
+
+  <script>
+    var volunteers = [];
+
+    function add() {
+      var name = document.getElementById('name').value;
+      var email = document.getElementById('email').value;
+      volunteers.push({ name: name, email: email });
+      document.getElementById('name').value = '';
+      document.getElementById('email').value = '';
+      render();
+    }
+
+    function render() {
+      var list = document.getElementById('list');
+      list.innerHTML = '';
+      for (var i = 0; i < volunteers.length; i++) {
+        var li = document.createElement('li');
+        li.textContent = volunteers[i].name + ' - ' + volunteers[i].email;
+        list.appendChild(li);
+      }
+    }
+  </script>
+</body>
+</html>

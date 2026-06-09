@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Community Resource Finder</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+    h1 { color: #333; }
+    .search-area { margin: 20px 0; }
+    input[type="text"] { padding: 8px; width: 300px; border: 1px solid #ccc; border-radius: 4px; }
+    select { padding: 8px; margin-left: 10px; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 8px 16px; background: #2c7a4b; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 8px; }
+    button:hover { background: #225f3a; }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 16px;
+      margin: 10px 0;
+      background: #fafafa;
+    }
+    .card h3 { margin: 0 0 4px; color: #2c7a4b; }
+    .card .category { font-size: 0.8rem; background: #e2f0e8; color: #2c7a4b; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px; }
+    .card p { margin: 4px 0; font-size: 0.9rem; color: #555; }
+    .no-results { color: #999; padding: 20px; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>Broome County Community Resources</h1>
+  <p>Find local services and support organizations in the Binghamton area.</p>
+
+  <div class="search-area">
+    <label for="searchInput">Search:</label>
+    <input type="text" id="searchInput" placeholder="Search by name or keyword">
+    <label for="categoryFilter">Category:</label>
+    <select id="categoryFilter">
+      <option value="">All Categories</option>
+      <option value="Food">Food</option>
+      <option value="Housing">Housing</option>
+      <option value="Health">Health</option>
+      <option value="Education">Education</option>
+      <option value="Employment">Employment</option>
+      <option value="Transportation">Transportation</option>
+      <option value="Youth">Youth</option>
+      <option value="Seniors">Seniors</option>
+    </select>
+    <button onclick="filterResources()">Search</button>
+    <button onclick="clearFilters()">Clear</button>
+  </div>
+
+  <div id="results"></div>
+
+  <script>
+    var resources = [
+      { name: "Broome County Food Bank", category: "Food", address: "3 UN Plaza, Johnson City, NY 13790", phone: "(607) 722-8457", description: "Distributes food to pantries, soup kitchens, and shelters across Broome County." },
+      { name: "Catholic Charities of Broome County", category: "Food", address: "232 Main St, Binghamton, NY 13905", phone: "(607) 729-9166", description: "Emergency food pantry and general social services." },
+      { name: "Volunteers of America Upstate New York", category: "Housing", address: "264 Chenango St, Binghamton, NY 13901", phone: "(607) 772-0634", description: "Emergency shelter, transitional housing, and supportive services." },
+      { name: "Rescue Mission of Broome County", category: "Housing", address: "42 Front St, Binghamton, NY 13905", phone: "(607) 723-8113", description: "Emergency shelter, meals, and recovery programs." },
+      { name: "Lourdes Hospital Community Health", category: "Health", address: "169 Riverside Dr, Binghamton, NY 13905", phone: "(607) 798-5111", description: "Community health programs and free/low-cost clinics." },
+      { name: "NYSARC Broome County Chapter", category: "Health", address: "249 Glenwood Rd, Binghamton, NY 13905", phone: "(607) 724-7258", description: "Support services for individuals with intellectual and developmental disabilities." },
+      { name: "SUNY Broome Community College", category: "Education", address: "907 Upper Front St, Binghamton, NY 13905", phone: "(607) 778-5000", description: "Affordable higher education, continuing ed, and workforce development." },
+      { name: "Broome-Tioga BOCES", category: "Education", address: "435 Glenwood Rd, Binghamton, NY 13905", phone: "(607) 763-3300", description: "Adult education, GED prep, and career/technical training." },
+      { name: "Career Solutions Broome County", category: "Employment", address: "171 Front St, Binghamton, NY 13905", phone: "(607) 778-1211", description: "Job search assistance, resume help, and employment training." },
+      { name: "Broome County Transit", category: "Transportation", address: "PO Box 1510, Binghamton, NY 13902", phone: "(607) 778-1400", description: "Fixed-route public bus service throughout Broome County." },
+      { name: "Broome County Youth Bureau", category: "Youth", address: "60 Hawley St, Binghamton, NY 13901", phone: "(607) 778-2138", description: "Youth programming, after-school services, and summer enrichment." },
+      { name: "Southern Tier Independence Center", category: "Health", address: "5 Corliss Ave, Binghamton, NY 13905", phone: "(607) 724-2111", description: "Independent living services for people with disabilities." },
+      { name: "BC Senior Services", category: "Seniors", address: "60 Hawley St, Binghamton, NY 13901", phone: "(607) 778-2411", description: "Meals, transportation, in-home support and social programs for older adults." },
+      { name: "Maternal & Family Health Services", category: "Health", address: "285 Main St, Binghamton, NY 13905", phone: "(607) 723-8411", description: "WIC, prenatal care, and family health education." }
+    ];
+
+    function renderCards(list) {
+      var container = document.getElementById('results');
+      if (list.length === 0) {
+        container.innerHTML = '<p class="no-results">No resources found. Try a different search.</p>';
+        return;
+      }
+      container.innerHTML = list.map(function(r) {
+        return '<div class="card">' +
+          '<h3>' + r.name + '</h3>' +
+          '<span class="category">' + r.category + '</span>' +
+          '<p>📍 ' + r.address + '</p>' +
+          '<p>📞 ' + r.phone + '</p>' +
+          '<p>' + r.description + '</p>' +
+          '</div>';
+      }).join('');
+    }
+
+    function filterResources() {
+      var query = document.getElementById('searchInput').value.toLowerCase();
+      var category = document.getElementById('categoryFilter').value;
+      var filtered = resources.filter(function(r) {
+        var matchText = !query || r.name.toLowerCase().includes(query) || r.description.toLowerCase().includes(query);
+        var matchCat  = !category || r.category === category;
+        return matchText && matchCat;
+      });
+      renderCards(filtered);
+    }
+
+    function clearFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('categoryFilter').value = '';
+      renderCards(resources);
+    }
+
+    // Allow search on Enter key
+    document.getElementById('searchInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') filterResources();
+    });
+
+    renderCards(resources);
+  </script>
+</body>
+</html>
