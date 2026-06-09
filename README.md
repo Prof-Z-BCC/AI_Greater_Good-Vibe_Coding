@@ -18,9 +18,21 @@ demo-repo/
 │   └── subtle-flaws/          Errors that look fine but aren't
 │
 ├── demo-02-volunteer-mgmt/    Session 3 — Architecture
-├── demo-03-community-finder/  Session 9 — Community Impact
+│   ├── poor-prompt/           Bare-bones output from a vague prompt
+│   ├── better-prompt/         Improved output with more specificity
+│   └── excellent-prompt/      Full-featured output from a detailed prompt
+│
+├── demo-03-community-finder/  Session 9 — Community Impact (Broome County)
+│   ├── prototype/             AI-generated first draft
+│   └── polished/              Human-refined, grant-ready version
+│
 ├── demo-04-broken-project/    Session 4 — Context Drift
+│   ├── v1-clean/ … v7-full-degradation/   Progressive degradation
+│   └── v8-recovered/          Recovered with architecture document
+│
 └── demo-05-production-ready/  Session 8 — Deployment
+    └── FACILITATOR-NOTES.md   Build prompts + release setup guide
+                               (live app: GitHub Prof-Z-BCC/advisor-intake-platform)
 ```
 
 ---
@@ -28,7 +40,7 @@ demo-repo/
 ## How to Use These Examples
 
 ### For Facilitators
-Each folder contains an `index.html` you can open directly in a browser — no server required for basic demos. More advanced examples note when a local server is needed.
+Demos 01–04 contain `index.html` files you can open directly in a browser — no server required. Demo 05 is a deployed Next.js application; see its `FACILITATOR-NOTES.md` for the live URL and release setup steps.
 
 ### For Participants
 Try running each version yourself. Ask yourself:
@@ -61,40 +73,45 @@ Three versions of the same app:
 
 ---
 
-## Prompt Quality Examples (Session 3)
+## Demo 02 — Volunteer Management App (Session 3)
 
-These prompts were used to demonstrate how specificity changes output quality.
+Three versions of the same application, each produced by a prompt of different quality. Open each `index.html` side by side to compare.
 
-**Poor prompt:**
-```
-Make a volunteer app.
-```
+| Folder | Prompt quality | What's missing |
+|--------|----------------|----------------|
+| `poor-prompt/` | "Make a volunteer app." | No persistence, no validation, no accessibility |
+| `better-prompt/` | Named the features explicitly | No persistence, incomplete accessibility |
+| `excellent-prompt/` | Specified behavior, accessibility, and constraints | Nothing critical — this is production-adjacent |
 
-**Better prompt:**
-```
-Create a volunteer management application with HTML, CSS, and JavaScript.
-Include a form to add volunteers with name and email, and a list showing all volunteers.
-```
+See `FACILITATOR-NOTES.md` for the full prompts and discussion questions.
 
-**Excellent prompt:**
-```
-Create a volunteer management application using HTML, CSS, and JavaScript.
+---
 
-Requirements:
-- A form to register new volunteers with fields for: full name, email address, phone number, 
-  and availability (checkboxes for: Monday, Wednesday, Friday, Weekend)
-- A volunteer list that displays all registered volunteers in a table
-- The ability to mark a volunteer as active or inactive
-- Data should persist when the page is refreshed (use localStorage)
-- The interface should be accessible: all form fields must have labels, 
-  the table must have proper headers, and all interactive elements must be keyboard-navigable
-- Use semantic HTML5 elements
-- The design should be clean and work on both desktop and mobile screens
+## Demo 03 — Community Resource Finder (Session 9)
 
-Do not use any external libraries or frameworks.
-```
+Two versions of a Broome County community resource finder, showing the difference between an AI-generated first draft and a human-refined version.
 
-**What changes:** Specificity in prompts = specificity in output. The more you understand what you need, the better the result. This is why understanding software — even at a basic level — makes you dramatically more effective with AI tools.
+| Folder | Description |
+|--------|-------------|
+| `prototype/` | Functional first draft — plain layout, basic search |
+| `polished/` | Grant-ready version — branded, accessible, SUNY Broome data |
+
+The polished version is appropriate to show to grant reviewers and community stakeholders. See `FACILITATOR-NOTES.md` for talking points.
+
+---
+
+## Demo 05 — Review Retention Credits Wizard (Session 8)
+
+A real, deployed application — not a teaching toy. Built to handle student intake for retained credit review at SUNY Broome Community College.
+
+**What it does:** Multi-step intake form → decision engine → routed emails to advisors + student confirmation + BCC audit trail.
+
+**Tech stack:** Next.js, TypeScript, Tailwind CSS, Resend (email), Vercel (deployment)
+
+**Live app:** `https://advisor-intake-platform-professor-z-s-projects.vercel.app/intake`  
+**Source:** `github.com/Prof-Z-BCC/advisor-intake-platform`
+
+The `FACILITATOR-NOTES.md` contains the 4 streamlined build prompts, an honest account of what the build actually looked like (including debugging and deployment friction), and complete step-by-step release setup instructions.
 
 ---
 
